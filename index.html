@@ -110,7 +110,7 @@
         </div>
     </div>
 
-    <!-- HEADER PRINCIPAL UNIFICADO (Elimina los brincos al hacer scroll) -->
+    <!-- HEADER PRINCIPAL UNIFICADO -->
     <header id="main-header" class="fixed top-0 w-full z-50 transition-[top] duration-300 ease-in-out">
         
         <!-- BANNER PROMOCIONAL -->
@@ -1099,6 +1099,20 @@
                         <input type="url" id="set-yt-url" placeholder="https://youtube.com/tu-canal" class="bg-black border border-zinc-700 rounded-lg px-4 py-2 focus:border-purple-500 flex-1 text-sm text-white">
                     </div>
                 </div>
+
+                <!-- SECCIÓN DE RESPALDO DE DATOS -->
+                <div class="w-full h-px bg-white/10 my-4"></div>
+                <h3 class="text-lg font-bold text-encom-yellow mb-2"><i class="ph-bold ph-database"></i> Copia de Seguridad (Backup)</h3>
+                <p class="text-zinc-400 text-sm mb-4">Descarga todo tu catálogo, imágenes y configuraciones a un archivo para no perder nada.</p>
+                <div class="flex gap-4">
+                    <button onclick="exportarDatos()" class="flex-1 bg-zinc-800 text-white py-2 rounded-lg font-bold hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-download-simple"></i> Exportar Respaldo
+                    </button>
+                    <label class="flex-1 bg-zinc-800 text-white py-2 rounded-lg font-bold hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="ph-bold ph-upload-simple"></i> Importar Respaldo
+                        <input type="file" accept=".json" class="hidden" onchange="importarDatos(this)">
+                    </label>
+                </div>
             </div>
             
             <button onclick="guardarSettings()" class="w-full mt-6 bg-purple-500 text-white py-3 rounded-xl font-extrabold uppercase hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all">Guardar Cambios</button>
@@ -1300,6 +1314,68 @@
             }
         }
 
+        /* --- EXPORTAR E IMPORTAR DATOS (BACKUP) --- */
+        async function exportarDatos() {
+            try {
+                const cats = await DB.get('categoriasEncom') || categorias;
+                const prods = await DB.get('catalogoEncom_v2') || productos;
+                const sets = await DB.get('encomSiteSettings_v1') || siteSettings;
+
+                const backup = {
+                    categorias: cats,
+                    productos: prods,
+                    settings: sets,
+                    fecha: new Date().toISOString()
+                };
+
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "encom_backup_" + Date.now() + ".json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+                mostrarMensaje('Copia de seguridad exportada con éxito.', 'success');
+            } catch (error) {
+                mostrarMensaje('Error al exportar los datos.', 'error');
+            }
+        }
+
+        function importarDatos(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    if (backup.categorias && backup.productos && backup.settings) {
+                        await DB.set('categoriasEncom', backup.categorias);
+                        await DB.set('catalogoEncom_v2', backup.productos);
+                        await DB.set('encomSiteSettings_v1', backup.settings);
+                        
+                        categorias = backup.categorias;
+                        productos = backup.productos;
+                        siteSettings = backup.settings;
+
+                        applySiteSettings();
+                        renderFilters();
+                        renderCatalog();
+                        actualizarSelectCategorias();
+                        cerrarModalSettings();
+                        
+                        mostrarMensaje('Datos importados y restaurados con éxito.', 'success');
+                    } else {
+                        mostrarMensaje('El archivo de respaldo no tiene el formato correcto.', 'error');
+                    }
+                } catch (error) {
+                    mostrarMensaje('Error al leer el archivo. Asegúrate de que sea el JSON correcto.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            input.value = ''; // reset
+        }
+
         /* --- ESTADO GLOBAL Y DATOS MOCK --- */
         const apiKey = ""; 
         let isAdmin = false;
@@ -1386,7 +1462,6 @@
                 nav.style.setProperty('--nav-top', `${navOffsetCached}px`);
                 const corpTopbar = document.getElementById('corporate-topbar');
                 const isMobile = window.innerWidth < 768;
-                // En móvil no existe el corporate-topbar
                 document.getElementById('nav-links').style.setProperty('--nav-top-mobile', `${navOffsetCached + (isMobile ? 0 : 32) + 96}px`); 
             }
         }
@@ -1622,6 +1697,8 @@
                 promoBanner.classList.add('hidden');
             }
             
+            calcularOffsetsNav();
+
             const logoNav = document.getElementById('site-logo-nav');
             if (logoNav) logoNav.src = siteSettings.logoUrl || defaultSiteSettings.logoUrl;
             const logoFooter = document.getElementById('site-logo-footer');
@@ -1650,7 +1727,6 @@
             const linkYt = document.getElementById('link-yt');
             if (linkYt) linkYt.href = siteSettings.youtubeUrl || defaultSiteSettings.youtubeUrl;
 
-            // Recalcula y fuerza la actualización de la barra superior para evitar el "brinco"
             setTimeout(() => {
                 calcularOffsetsNav();
                 window.dispatchEvent(new Event('scroll'));
