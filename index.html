@@ -110,7 +110,7 @@
         </div>
     </div>
 
-    <!-- HEADER PRINCIPAL UNIFICADO -->
+    <!-- HEADER PRINCIPAL UNIFICADO (Elimina los brincos al hacer scroll) -->
     <header id="main-header" class="fixed top-0 w-full z-50 transition-[top] duration-300 ease-in-out">
         
         <!-- BANNER PROMOCIONAL -->
@@ -1099,8 +1099,8 @@
                         <input type="url" id="set-yt-url" placeholder="https://youtube.com/tu-canal" class="bg-black border border-zinc-700 rounded-lg px-4 py-2 focus:border-purple-500 flex-1 text-sm text-white">
                     </div>
                 </div>
-
-                <!-- SECCIÓN DE RESPALDO DE DATOS -->
+            </div>
+            <!-- SECCIÓN DE RESPALDO DE DATOS -->
                 <div class="w-full h-px bg-white/10 my-4"></div>
                 <h3 class="text-lg font-bold text-encom-yellow mb-2"><i class="ph-bold ph-database"></i> Copia de Seguridad (Backup)</h3>
                 <p class="text-zinc-400 text-sm mb-4">Descarga todo tu catálogo, imágenes y configuraciones a un archivo para no perder nada.</p>
@@ -1113,8 +1113,7 @@
                         <input type="file" accept=".json" class="hidden" onchange="importarDatos(this)">
                     </label>
                 </div>
-            </div>
-            
+
             <button onclick="guardarSettings()" class="w-full mt-6 bg-purple-500 text-white py-3 rounded-xl font-extrabold uppercase hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all">Guardar Cambios</button>
         </div>
     </div>
@@ -1300,6 +1299,7 @@
         };
 
         async function migrarDatos() {
+            
             if (localStorage.getItem('catalogoEncom_v2')) {
                 await DB.set('catalogoEncom_v2', JSON.parse(localStorage.getItem('catalogoEncom_v2')));
                 localStorage.removeItem('catalogoEncom_v2');
@@ -1313,8 +1313,7 @@
                 localStorage.removeItem('categoriasEncom');
             }
         }
-
-        /* --- EXPORTAR E IMPORTAR DATOS (BACKUP) --- */
+/* --- EXPORTAR E IMPORTAR DATOS (BACKUP) --- */
         async function exportarDatos() {
             try {
                 const cats = await DB.get('categoriasEncom') || categorias;
@@ -1369,7 +1368,7 @@
                         mostrarMensaje('El archivo de respaldo no tiene el formato correcto.', 'error');
                     }
                 } catch (error) {
-                    mostrarMensaje('Error al leer el archivo. Asegúrate de que sea el JSON correcto.', 'error');
+                    mostrarMensaje('Error al leer el archivo. Asegúrate de que sea un .json válido.', 'error');
                 }
             };
             reader.readAsText(file);
@@ -1462,6 +1461,7 @@
                 nav.style.setProperty('--nav-top', `${navOffsetCached}px`);
                 const corpTopbar = document.getElementById('corporate-topbar');
                 const isMobile = window.innerWidth < 768;
+                // En móvil no existe el corporate-topbar
                 document.getElementById('nav-links').style.setProperty('--nav-top-mobile', `${navOffsetCached + (isMobile ? 0 : 32) + 96}px`); 
             }
         }
@@ -1697,8 +1697,6 @@
                 promoBanner.classList.add('hidden');
             }
             
-            calcularOffsetsNav();
-
             const logoNav = document.getElementById('site-logo-nav');
             if (logoNav) logoNav.src = siteSettings.logoUrl || defaultSiteSettings.logoUrl;
             const logoFooter = document.getElementById('site-logo-footer');
@@ -1727,6 +1725,7 @@
             const linkYt = document.getElementById('link-yt');
             if (linkYt) linkYt.href = siteSettings.youtubeUrl || defaultSiteSettings.youtubeUrl;
 
+            // Recalcula y fuerza la actualización de la barra superior para evitar el "brinco"
             setTimeout(() => {
                 calcularOffsetsNav();
                 window.dispatchEvent(new Event('scroll'));
